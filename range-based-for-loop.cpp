@@ -1,3 +1,7 @@
+/*
+ * Range-based for loop is a feature introduced in C++17.
+ */
+
 #include <iostream>
 #include <vector>
 #include <utility>      // pair
