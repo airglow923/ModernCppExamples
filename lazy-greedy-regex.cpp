@@ -11,7 +11,7 @@
 int main()
 {
     std::string target{"<em>Hello World</em>"};
-    std::regex lazy{R"(<.+?>)"};
+    std::regex lazy{R"(<.+?>)"};    // raw string literal since C++11
     std::regex greedy{R"(<.+>)"};
     std::smatch match;
 
