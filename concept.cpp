@@ -1,5 +1,5 @@
 /*
- * Concept is a feature introduced since C++20.
+ * Concept is a feature introduced in C++20.
  */
 
 #include <iostream>
