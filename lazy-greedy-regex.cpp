@@ -1,8 +1,8 @@
 /*
  * std::regex is a library introduced in C++11.
  * 
- * Lazy in regex means to match the least number of characters.
- * Greedy in regex means to match the most number of characters.
+ * Lazy in regex means to capture as less characters as possible.
+ * Greedy in regex means to capture as much characters as possible.
  */
 
 #include <iostream>
