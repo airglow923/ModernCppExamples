@@ -1,3 +1,8 @@
+/*
+ * Class template argument deduction (CTAD) is a feature introduced in C++17.
+ * Since then, user-defined deduction guides can be set.
+ */
+
 #include <iostream>
 #include <vector>
 #include <iterator>
