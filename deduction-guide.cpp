@@ -32,12 +32,16 @@ Container<T>::Container(Iter beg, Iter end)
 {
 }
 
+/* user-defined deduction guides */
+
 template<typename T>
 Container(std::initializer_list<T>) -> Container<T>;
 
 template<typename Iter>
 Container(Iter, Iter)
     -> Container<typename std::iterator_traits<Iter>::value_type>;
+
+/* user-defined deduction guides */
 
 int main()
 {
