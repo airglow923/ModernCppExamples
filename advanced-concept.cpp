@@ -89,10 +89,8 @@ concept Container = requires(C a, C b) {
     {a = std::move(b)} -> std::same_as<C&>;
     {a.~C()} -> std::same_as<void>;
     
-    // will be fixed in the future
-    {a.begin()} ->
-        std::same_as<typename C::iterator> ||
-        std::same_as<typename C::const_iterator>;
+    requires std::same_as<decltype(a.begin()), typename C::iterator>
+        || std::same_as<decltype(a.begin()), typename C::const_iterator>;
 };
 
 int main()
