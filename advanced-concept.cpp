@@ -7,12 +7,15 @@ template<typename A, typename B = A>
 concept Allocator = requires(A a, B b) {
     typename A::value_type;
 
+    // Erasable
+    {std::allocator_traits<A>::destroy(
+        a, std::declval(
+            std::allocator_traits<A>::pointer))} -> std::same_as<void>;
+
     {*std::declval(std::allocator_traits<A>::pointer)} ->
         std::same_as<typename A::value_type&>;
     {*std::declval(std::allocator_traits<A>::const_pointer)} ->
         std::same_as<const typename A::value_type&>;
-    {std::declval(std::allocator_traits<A>::pointer)->()} ->
-        *std::declval(std::allocator_traits<A>::pointer);
 
     requires std::is_convertible_v<
         typename std::allocator_traits<A>::void_pointer,
@@ -59,8 +62,37 @@ concept Sequence = requires(S s) {
 };
 
 template<typename C>
-concept Container = requires(C c) {
+concept Container = requires(C a, C b) {
     typename C::value_type;
+    typename C::reference;
+    typename C::const_refernce;
+    typename C::iterator;
+    typename C::const_iterater;
+    typename C::difference_type;
+    typename C::size_type;
+
+    requires LegacyForwardIterator<typename C::iterator>;
+    requires LegacyForwardIterator<typename C::const_iterator>;
+
+    requires std::same_as<
+        typename C::difference_type,
+        typename std::iterator_traits<typename C::iterator>::difference_type>;
+
+    requires std::same_as<
+        typename C::difference_type,
+        typename std::iterator_traits<typename C::const_iterator>::difference_type>;
+
+    {C()} -> std::same_as<C>;
+    {C(a)} -> std::same_as<C>;
+    {C(std::move(a))} -> std::same_as<C>;
+    {a = b} -> std::same_as<C&>;
+    {a = std::move(b)} -> std::same_as<C&>;
+    {a.~C()} -> std::same_as<void>;
+    
+    // will be fixed in the future
+    {a.begin()} ->
+        std::same_as<typename C::iterator> ||
+        std::same_as<typename C::const_iterator>;
 };
 
 int main()
