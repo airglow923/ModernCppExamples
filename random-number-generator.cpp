@@ -18,18 +18,15 @@ void fill_random(
     
     if (std::is_integral_v<T>) {
         std::uniform_int_distribution<U> dist{start, end};
-        for (;; ++start) {
+        for (; start <= end; --end)
             container.push_back(dist(engine));
-            if (start == end)
-                return;
-        }
     }
 }
 
 int main()
 {
-    std::vector<short> iv;
-    iv.reserve(std::numeric_limits<short>::max());
+    std::vector<char> iv;
+    iv.reserve(std::numeric_limits<char>::max());
 
     fill_random(iv);
 
