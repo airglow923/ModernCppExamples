@@ -5,6 +5,7 @@
 #include <vector>
 #include <limits>
 #include <numeric>
+#include <chrono>
 
 using ull = unsigned long long;
 
@@ -36,24 +37,24 @@ template<
 ull async_accumulate(const Container<T, Alloc>& container)
 {
     auto func = std::accumulate<
-        typename Container<T, Alloc>::const_iterator, T>;
+        typename Container<T, Alloc>::const_iterator, ull>;
 
     auto beg = container.cbegin();
     std::size_t sz = container.size();
 
-    auto thread0 = std::async(func, beg, beg + sz / 4, 0);
-    auto thread1 = std::async(func, beg + sz / 4, beg + sz / 2, 0);
-    auto thread2 = std::async(func, beg + sz / 2, beg + sz * 3 / 4, 0);
-    auto thread3 = std::async(func, beg + sz * 3 / 4, beg + sz, 0);
+    auto thread0 = std::async(func, beg,              beg + sz / 4,     0);
+    auto thread1 = std::async(func, beg + sz / 4,     beg + sz / 2,     0);
+    auto thread2 = std::async(func, beg + sz / 2,     beg + sz * 3 / 4, 0);
+    auto thread3 = std::async(func, beg + sz * 3 / 4, beg + sz,         0);
 
     return thread0.get() + thread1.get() + thread2.get() + thread3.get();
 }
 
 int main()
 {
-    std::vector<short> iv;
-    iv.reserve(std::numeric_limits<short>::max());
+    std::vector<char> iv;
+    iv.reserve(std::numeric_limits<char>::max());
     fill_random(iv);
-    
+
     std::cout << "Sum: " << async_accumulate(iv) << '\n';
 }
