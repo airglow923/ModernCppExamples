@@ -11,10 +11,11 @@ using ull = unsigned long long;
 template<
     typename T,
     typename U = T,
-    template<typename, typename = std::allocator<T>> typename Container
+    typename Alloc = std::allocator<T>,
+    template<typename, typename> typename Container
 >
 void fill_random(
-    Container<T>& container,
+    Container<T, Alloc>& container,
     U start = 0, U end = std::numeric_limits<T>::max())
 {
     std::random_device rd;
