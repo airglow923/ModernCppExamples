@@ -2,49 +2,62 @@
 #include <concepts>
 #include <memory>
 #include <iterator>
+#include <ranges>
+#include <iostream>
+#include <vector>
 
-template<typename A, typename B = A>
-concept Allocator = requires(A a, B b) {
+template<typename A>
+concept is_allocator = requires(A a, A b) {
     typename A::value_type;
 
-    // Erasable
     {std::allocator_traits<A>::destroy(
-        a, std::declval(
-            std::allocator_traits<A>::pointer))} -> std::same_as<void>;
+        a, std::allocator_traits<A>::allocate(
+            a,
+            std::declval<typename std::allocator_traits<A>::size_type>()))} ->
+        std::same_as<void>;
 
-    {*std::declval(std::allocator_traits<A>::pointer)} ->
+    {*std::allocator_traits<A>::allocate(
+        a, std::declval<typename std::allocator_traits<A>::size_type>())} ->
         std::same_as<typename A::value_type&>;
-    {*std::declval(std::allocator_traits<A>::const_pointer)} ->
+
+    {*std::declval<typename std::allocator_traits<A>::const_pointer>()} ->
         std::same_as<const typename A::value_type&>;
 
-    requires std::is_convertible_v<
-        typename std::allocator_traits<A>::void_pointer,
+    requires std::same_as<decltype(
+        static_cast<typename std::allocator_traits<A>::pointer>(
+            std::declval<typename std::allocator_traits<A>::void_pointer>())),
         typename std::allocator_traits<A>::pointer>;
 
-    requires std::is_convertible_v<
-        typename std::allocator_traits<A>::void_pointer,
+    requires std::same_as<decltype(
+        static_cast<typename std::allocator_traits<A>::const_pointer>(
+            std::declval<
+                typename std::allocator_traits<A>::const_void_pointer>())),
         typename std::allocator_traits<A>::const_pointer>;
 
     {std::pointer_traits<
         typename std::allocator_traits<A>::pointer>::pointer_to(
-            *std::declval(std::allocator_traits<A>::pointer))} ->
+            *std::allocator_traits<A>::allocate(
+                a, std::declval<
+                    typename std::allocator_traits<A>::size_type>()))} ->
         std::same_as<typename std::allocator_traits<A>::pointer>;
 
-    {a.allocate()} -> std::same_as<typename std::allocator_traits<A>::pointer>;
-    {a.deallocate()} -> std::same_as<void>;
+    {a.allocate(
+        std::declval<typename std::allocator_traits<A>::size_type>())} ->
+        std::same_as<typename std::allocator_traits<A>::pointer>;
+
+    {a.deallocate(
+        std::allocator_traits<A>::allocate(
+            a, std::declval<typename std::allocator_traits<A>::size_type>()),
+        std::declval<typename std::allocator_traits<A>::size_type>())} ->
+            std::same_as<void>;
 
     {a == b} -> std::same_as<bool>;
     {a != b} -> std::same_as<bool>;
 
     requires std::is_nothrow_copy_constructible_v<A>;
     requires std::is_nothrow_copy_assignable_v<A>;
-
-    {typename A::rebind_traitsc<B>(a)} -> std::same_as<B>;   
-    {typename A::rebind_traitsc<A>(a)} -> std::same_as<A>;
-    
     requires std::is_nothrow_move_constructible_v<A>;
     requires std::is_nothrow_move_assignable_v<A>;
-    requires A(std::move(b)) == A(b);
 };
 
 template<typename S>
@@ -61,18 +74,34 @@ concept Sequence = requires(S s) {
     requires std::input_iterator<typename S::iterator_type>;
 };
 
-template<typename C>
-concept Container = requires(C a, C b) {
+template<typename Iter, typename Container>
+concept ContainerIterator =
+    std::same_as<Iter, typename Container::iterator> ||
+    std::same_as<Iter, typename Container::const_iterator>;
+
+// template<typename T>
+// concept copy_insertable;
+
+template<typename C, typename T, typename A>
+concept is_container = requires(C a, C b) {
     typename C::value_type;
     typename C::reference;
-    typename C::const_refernce;
+    typename C::const_reference;
     typename C::iterator;
-    typename C::const_iterater;
+    typename C::const_iterator;
     typename C::difference_type;
     typename C::size_type;
 
-    requires LegacyForwardIterator<typename C::iterator>;
-    requires LegacyForwardIterator<typename C::const_iterator>;
+    requires std::default_initializable<C>;
+    requires std::copy_constructible<C>;
+    requires std::equality_comparable<C>;
+    requires std::swappable<C>;
+
+    requires std::equality_comparable<T>;
+    requires std::destructible<T>;
+
+    requires std::forward_iterator<typename C::iterator>;
+    requires std::forward_iterator<typename C::const_iterator>;
 
     requires std::same_as<
         typename C::difference_type,
@@ -82,17 +111,39 @@ concept Container = requires(C a, C b) {
         typename C::difference_type,
         typename std::iterator_traits<typename C::const_iterator>::difference_type>;
 
-    {C()} -> std::same_as<C>;
-    {C(a)} -> std::same_as<C>;
-    {C(std::move(a))} -> std::same_as<C>;
-    {a = b} -> std::same_as<C&>;
+    {C()}              -> std::same_as<C>;
+    {C(a)}             -> std::same_as<C>;
+    {C(std::move(a))}  -> std::same_as<C>;
+    {a = b}            -> std::same_as<C&>;
     {a = std::move(b)} -> std::same_as<C&>;
-    {a.~C()} -> std::same_as<void>;
-    
-    requires std::same_as<decltype(a.begin()), typename C::iterator>
-        || std::same_as<decltype(a.begin()), typename C::const_iterator>;
+    {a.~C()}           -> std::same_as<void>;
+    {a.begin()}        -> ContainerIterator<C>;
+    {a.end()}          -> ContainerIterator<C>;
+    {a.cbegin()}       -> std::same_as<typename C::const_iterator>;
+    {a.cend()}         -> std::same_as<typename C::const_iterator>;
+    {a == b}           -> std::convertible_to<bool>;
+    {a != b}           -> std::convertible_to<bool>;
+    {a.swap(b)}        -> std::same_as<void>;
+    {std::swap(a, b)}  -> std::same_as<void>;
+    {a.size()}         -> std::same_as<typename C::size_type>;
+    {a.max_size()}     -> std::same_as<typename C::size_type>;  
+    {a.empty()}        -> std::convertible_to<bool>;
 };
+
+template<
+    typename T,
+    is_allocator Alloc = std::allocator<T>,
+    template<typename, typename> typename Container
+> requires is_container<Container<T, Alloc>, T, Alloc>
+void print_container(const Container<T, Alloc>& container)
+{
+    for (const auto& elem : container)
+        std::cout << elem << ' ';
+    std::cout << '\n';
+}
 
 int main()
 {
+    std::vector iv{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    print_container<int>(iv);
 }
