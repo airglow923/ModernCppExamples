@@ -18,7 +18,7 @@ concept is_allocator = requires(A a, A b, T t) {
         std::same_as<const T&>;
 
     requires std::same_as<decltype(static_cast<T*>(
-            std::declval<typename std::allocator_traits<A>::void_pointer>())),
+        std::declval<typename std::allocator_traits<A>::void_pointer>())),
         T*>;
 
     requires std::same_as<decltype(
@@ -84,7 +84,7 @@ concept is_container_iterator =
     std::same_as<Iter, typename Container::const_iterator>;
 
 template<typename C, typename Type_, typename Alloc_>
-concept is_container = requires(C a, C b, Type_ t, Alloc_ alloc) {
+concept is_container = requires(C a, C b) {
     typename C::value_type;
     typename C::reference;
     typename C::const_reference;
