@@ -6,27 +6,20 @@
 #include <iostream>
 #include <vector>
 
-template<typename A>
-concept is_allocator = requires(A a, A b) {
+template<typename A, typename T>
+concept is_allocator = requires(A a, A b, T t) {
     typename A::value_type;
 
-    {std::allocator_traits<A>::destroy(
-        a, std::allocator_traits<A>::allocate(
-            a,
-            std::declval<typename std::allocator_traits<A>::size_type>()))} ->
-        std::same_as<void>;
+    {std::allocator_traits<A>::destroy(a, &t)} -> std::same_as<void>;
 
-    {*std::allocator_traits<A>::allocate(
-        a, std::declval<typename std::allocator_traits<A>::size_type>())} ->
-        std::same_as<typename A::value_type&>;
+    {*&t} -> std::same_as<T&>;
 
     {*std::declval<typename std::allocator_traits<A>::const_pointer>()} ->
-        std::same_as<const typename A::value_type&>;
+        std::same_as<const T&>;
 
-    requires std::same_as<decltype(
-        static_cast<typename std::allocator_traits<A>::pointer>(
+    requires std::same_as<decltype(static_cast<T*>(
             std::declval<typename std::allocator_traits<A>::void_pointer>())),
-        typename std::allocator_traits<A>::pointer>;
+        T*>;
 
     requires std::same_as<decltype(
         static_cast<typename std::allocator_traits<A>::const_pointer>(
@@ -34,22 +27,15 @@ concept is_allocator = requires(A a, A b) {
                 typename std::allocator_traits<A>::const_void_pointer>())),
         typename std::allocator_traits<A>::const_pointer>;
 
-    {std::pointer_traits<
-        typename std::allocator_traits<A>::pointer>::pointer_to(
-            *std::allocator_traits<A>::allocate(
-                a, std::declval<
-                    typename std::allocator_traits<A>::size_type>()))} ->
-        std::same_as<typename std::allocator_traits<A>::pointer>;
+    {std::pointer_traits<T*>::pointer_to(*&t)} -> std::same_as<T*>;
 
     {a.allocate(
         std::declval<typename std::allocator_traits<A>::size_type>())} ->
-        std::same_as<typename std::allocator_traits<A>::pointer>;
+        std::same_as<T*>;
 
     {a.deallocate(
-        std::allocator_traits<A>::allocate(
-            a, std::declval<typename std::allocator_traits<A>::size_type>()),
-        std::declval<typename std::allocator_traits<A>::size_type>())} ->
-            std::same_as<void>;
+        &t, std::declval<typename std::allocator_traits<A>::size_type>())} ->
+        std::same_as<void>;
 
     {a == b} -> std::same_as<bool>;
     {a != b} -> std::same_as<bool>;
@@ -82,7 +68,7 @@ concept ContainerIterator =
 // template<typename T>
 // concept copy_insertable;
 
-template<typename C, typename T, typename A>
+template<typename C>
 concept is_container = requires(C a, C b) {
     typename C::value_type;
     typename C::reference;
@@ -97,8 +83,8 @@ concept is_container = requires(C a, C b) {
     requires std::equality_comparable<C>;
     requires std::swappable<C>;
 
-    requires std::equality_comparable<T>;
-    requires std::destructible<T>;
+    requires std::equality_comparable<typename C::value_type>;
+    requires std::destructible<typename C::value_type>;
 
     requires std::forward_iterator<typename C::iterator>;
     requires std::forward_iterator<typename C::const_iterator>;
@@ -132,9 +118,9 @@ concept is_container = requires(C a, C b) {
 
 template<
     typename T,
-    is_allocator Alloc = std::allocator<T>,
+    is_allocator<T> Alloc = std::allocator<T>,
     template<typename, typename> typename Container
-> requires is_container<Container<T, Alloc>, T, Alloc>
+> requires is_container<Container<T, Alloc>>
 void print_container(const Container<T, Alloc>& container)
 {
     for (const auto& elem : container)
@@ -145,5 +131,5 @@ void print_container(const Container<T, Alloc>& container)
 int main()
 {
     std::vector iv{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-    print_container<int>(iv);
+    print_container(iv);
 }
