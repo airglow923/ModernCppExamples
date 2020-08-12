@@ -60,16 +60,31 @@ concept Sequence = requires(S s) {
     requires std::input_iterator<typename S::iterator_type>;
 };
 
+template<typename Type_, typename Alloc_>
+concept is_erasable = requires(Type_ t, Alloc_ a) {
+    {std::allocator_traits<Alloc_>::destroy(a, &t)} -> std::same_as<void>;
+};
+
+template<typename Type_, typename Alloc_>
+concept is_move_insertable = requires(Type_ t, Alloc_ a) {
+    {std::allocator_traits<Alloc_>::construct(a, &t, t)} -> std::same_as<void>;
+};
+
+template<typename Type_, typename Alloc_>
+concept is_copy_insertable =
+    is_move_insertable<Type_, Alloc_> &&
+    requires (Type_ t, Alloc_ a) {
+        {std::allocator_traits<Alloc_>::construct(a, &t, std::move(t))} ->
+            std::same_as<void>;
+    };
+
 template<typename Iter, typename Container>
-concept ContainerIterator =
+concept is_container_iterator =
     std::same_as<Iter, typename Container::iterator> ||
     std::same_as<Iter, typename Container::const_iterator>;
 
-// template<typename T>
-// concept copy_insertable;
-
-template<typename C>
-concept is_container = requires(C a, C b) {
+template<typename C, typename Type_, typename Alloc_>
+concept is_container = requires(C a, C b, Type_ t, Alloc_ alloc) {
     typename C::value_type;
     typename C::reference;
     typename C::const_reference;
@@ -78,11 +93,15 @@ concept is_container = requires(C a, C b) {
     typename C::difference_type;
     typename C::size_type;
 
+    // Erasable type
+    requires is_erasable<Type_, Alloc_>;
+
     requires std::default_initializable<C>;
     requires std::copy_constructible<C>;
     requires std::equality_comparable<C>;
     requires std::swappable<C>;
 
+    requires is_copy_insertable<Type_, Alloc_>;
     requires std::equality_comparable<typename C::value_type>;
     requires std::destructible<typename C::value_type>;
 
@@ -95,7 +114,8 @@ concept is_container = requires(C a, C b) {
 
     requires std::same_as<
         typename C::difference_type,
-        typename std::iterator_traits<typename C::const_iterator>::difference_type>;
+        typename std::iterator_traits<
+            typename C::const_iterator>::difference_type>;
 
     {C()}              -> std::same_as<C>;
     {C(a)}             -> std::same_as<C>;
@@ -103,8 +123,8 @@ concept is_container = requires(C a, C b) {
     {a = b}            -> std::same_as<C&>;
     {a = std::move(b)} -> std::same_as<C&>;
     {a.~C()}           -> std::same_as<void>;
-    {a.begin()}        -> ContainerIterator<C>;
-    {a.end()}          -> ContainerIterator<C>;
+    {a.begin()}        -> is_container_iterator<C>;
+    {a.end()}          -> is_container_iterator<C>;
     {a.cbegin()}       -> std::same_as<typename C::const_iterator>;
     {a.cend()}         -> std::same_as<typename C::const_iterator>;
     {a == b}           -> std::convertible_to<bool>;
@@ -120,7 +140,7 @@ template<
     typename T,
     is_allocator<T> Alloc = std::allocator<T>,
     template<typename, typename> typename Container
-> requires is_container<Container<T, Alloc>>
+> requires is_container<Container<T, Alloc>, T, Alloc>
 void print_container(const Container<T, Alloc>& container)
 {
     for (const auto& elem : container)
