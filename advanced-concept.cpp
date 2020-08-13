@@ -93,14 +93,12 @@ concept is_container = requires(C a, C b) {
     typename C::difference_type;
     typename C::size_type;
 
-    // Erasable type
-    requires is_erasable<Type_, Alloc_>;
-
     requires std::default_initializable<C>;
     requires std::copy_constructible<C>;
     requires std::equality_comparable<C>;
     requires std::swappable<C>;
 
+    requires is_erasable<Type_, Alloc_>;
     requires is_copy_insertable<Type_, Alloc_>;
     requires std::equality_comparable<typename C::value_type>;
     requires std::destructible<typename C::value_type>;
